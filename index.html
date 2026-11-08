@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cellular Respiration & Photosynthesis Randomizer</title>
+    <title>Biological Pathway Button Randomizer</title>
     <style>
         :root {
             --bg-color: #0f172a;
             --card-bg: #1e293b;
+            --pool-bg: #111827;
             --text-color: #f8fafc;
             --accent: #38bdf8;
         }
@@ -38,11 +39,37 @@
         p {
             color: #94a3b8;
             font-size: 0.95rem;
+            max-width: 600px;
+        }
+
+        .pool-section {
+            background-color: var(--pool-bg);
+            border: 2px dashed #334155;
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .pool-section h3 {
+            margin-top: 0;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .button-zone {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
         }
 
         .container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
             width: 100%;
             max-width: 1200px;
@@ -54,10 +81,16 @@
             border: 2px solid #334155;
             border-radius: 12px;
             padding: 20px;
-            min-height: 140px;
+            min-height: 120px;
             display: flex;
             flex-direction: column;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .topic-card h2 {
@@ -69,19 +102,11 @@
             text-align: center;
         }
 
-        .button-zone {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            flex-grow: 1;
-        }
-
         .topic-btn {
             border: none;
             border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 1.2rem;
+            padding: 10px 14px;
+            font-size: 1.3rem;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -90,20 +115,19 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        .topic-btn:hover:not(:disabled) {
+        .topic-btn:hover {
             transform: scale(1.1);
             filter: brightness(1.15);
         }
 
-        .topic-btn:active:not(:disabled) {
+        .topic-btn:active {
             transform: scale(0.95);
         }
 
-        .topic-btn:disabled {
-            opacity: 0.25;
-            cursor: not-allowed;
+        .chosen-btn {
+            cursor: default;
             transform: none !important;
-            filter: grayscale(100%);
+            filter: none;
         }
 
         #reset-btn {
@@ -128,18 +152,28 @@
             font-weight: 500;
             color: #34d399;
             min-height: 24px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Topic Button Randomizer</h1>
-        <p>Clicking a button locks it out. Remaining active buttons instantly re-randomize their topics, emojis, and colors!</p>
+        <h1>Biological Pathway Randomizer</h1>
+        <p>Topics are hidden. Click any button from the pool below to reveal its assigned topic!</p>
     </header>
 
-    <div class="container" id="topics-container">
-        <!-- Topic cards injected via JS -->
+    <!-- Central Button Pool -->
+    <div class="pool-section">
+        <h3>Available Buttons Pool</h3>
+        <div class="button-zone" id="button-pool">
+            <!-- Active unchosen buttons appear here -->
+        </div>
+    </div>
+
+    <!-- Revealed Topics Grid -->
+    <div class="container" id="revealed-topics">
+        <!-- Topic cards appear here only when a button is chosen -->
     </div>
 
     <button id="reset-btn" onclick="resetGame()">Reset All Buttons</button>
@@ -155,22 +189,17 @@
             "Electron Transport Chain"
         ];
 
-        // Master pool of emojis and colors to draw from randomly
-        const emojiPool = ['☀️', '🌿', '💧', '⚡', '🔬', '🧪', '🧬', '⚛️', '🦠', '💡', '🧫', '🌀', '🔋', '🔥', '⚙️', '🔮', '🧭', '🌟', '🌱', '🧪', '🧬', '💥'];
+        const emojiPool = ['☀️', '🌿', '💧', '⚡', '🔬', '🧪', '🧬', '⚛️', '🦠', '💡', '🧫', '🌀', '🔋', '🔥', '⚙️', '🔮', '🧭', '🌟', '🌱', '💥'];
         const colorPool = ['#f59e0b', '#10b981', '#0ea5e9', '#eab308', '#6366f1', '#ec4899', '#8b5cf6', '#14b8a6', '#84cc16', '#f97316', '#06b6d4', '#a855f7', '#22c55e', '#ef4444', '#64748b', '#d946ef', '#f43f5e', '#fbbf24'];
 
-        // Initialize 18 unique structural buttons
+        // Initialize 18 unique buttons
         let buttonsState = Array.from({ length: 18 }, (_, index) => ({
             id: index,
-            chosen: false
+            chosen: false,
+            assignedTopic: null
         }));
 
         function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[j]]; // standard swap
-            }
-            // fix proper swap syntax
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [array[i], array[j]] = [array[j], array[i]];
@@ -178,44 +207,47 @@
             return array;
         }
 
-        function renderFullBoard() {
-            const container = document.getElementById('topics-container');
-            container.innerHTML = '';
+        function render() {
+            const poolContainer = document.getElementById('button-pool');
+            const revealedContainer = document.getElementById('revealed-topics');
+            poolContainer.innerHTML = '';
+            revealedContainer.innerHTML = '';
 
             const unchosen = buttonsState.filter(b => !b.chosen);
             const chosen = buttonsState.filter(b => b.chosen);
 
-            // Create topic buckets
-            const buckets = {};
-            topics.forEach(t => buckets[t] = []);
-
-            // Randomize emojis and colors freshly for current active buttons upon every render
+            // Re-randomize emojis and colors for active unchosen buttons
             const shuffledEmojis = shuffle([...emojiPool]);
             const shuffledColors = shuffle([...colorPool]);
 
             unchosen.forEach((btn, idx) => {
-                const topic = topics[idx % topics.length];
-                buckets[topic].push({
-                    ...btn,
-                    emoji: shuffledEmojis[idx % shuffledEmojis.length],
-                    color: shuffledColors[idx % shuffledColors.length],
-                    status: 'active'
-                });
+                // Randomly assign a temporary hidden topic to each active button
+                btn.currentTopic = topics[Math.floor(Math.random() * topics.length)];
+                btn.emoji = shuffledEmojis[idx % shuffledEmojis.length];
+                btn.color = shuffledColors[idx % shuffledColors.length];
             });
 
-            // Keep track of chosen ones (their visuals can stay locked or placeholder)
-            chosen.forEach((btn, idx) => {
-                const topic = topics[idx % topics.length];
-                buckets[topic].push({
-                    ...btn,
-                    emoji: '🔒',
-                    color: '#334155',
-                    status: 'chosen'
-                });
+            // Render unchosen buttons in the pool
+            shuffle([...unchosen]).forEach(btnObj => {
+                const btn = document.createElement('button');
+                btn.className = 'topic-btn';
+                btn.textContent = btnObj.emoji;
+                btn.style.backgroundColor = btnObj.color;
+                btn.onclick = () => handleButtonClick(btnObj.id);
+                poolContainer.appendChild(btn);
             });
 
-            // Render cards
-            topics.forEach(topicName => {
+            // Group chosen buttons by their permanently locked assigned topic
+            const revealedMap = {};
+            chosen.forEach(btn => {
+                if (!revealedMap[btn.assignedTopic]) {
+                    revealedMap[btn.assignedTopic] = [];
+                }
+                revealedMap[btn.assignedTopic].push(btn);
+            });
+
+            // Render revealed topic cards
+            Object.keys(revealedMap).forEach(topicName => {
                 const card = document.createElement('div');
                 card.className = 'topic-card';
 
@@ -226,36 +258,24 @@
                 const buttonZone = document.createElement('div');
                 buttonZone.className = 'button-zone';
 
-                const items = buckets[topicName];
-                // Shuffle items inside the card so their positions within the topic card are also mixed
-                shuffle(items);
-
-                items.forEach(btnObj => {
+                revealedMap[topicName].forEach(btnObj => {
                     const btn = document.createElement('button');
-                    btn.className = 'topic-btn';
+                    btn.className = 'topic-btn chosen-btn';
                     btn.textContent = btnObj.emoji;
                     btn.style.backgroundColor = btnObj.color;
-                    
-                    if (btnObj.status === 'chosen') {
-                        btn.disabled = true;
-                    } else {
-                        btn.onclick = () => handleButtonClick(btnObj.id);
-                    }
-
                     buttonZone.appendChild(btn);
                 });
 
                 card.appendChild(buttonZone);
-                container.appendChild(card);
+                revealedContainer.appendChild(card);
             });
 
-            // Update status message
-            const remaining = buttonsState.filter(b => !b.chosen).length;
+            // Status message update
             const statusEl = document.getElementById('status');
-            if (remaining === 0) {
-                statusEl.textContent = "🎉 All buttons have been successfully chosen!";
+            if (unchosen.length === 0) {
+                statusEl.textContent = "🎉 All 18 buttons have been chosen and all topics revealed!";
             } else {
-                statusEl.textContent = `Remaining buttons to choose: ${remaining}`;
+                statusEl.textContent = `Remaining buttons in pool: ${unchosen.length} | Topics revealed: ${Object.keys(revealedMap).length} / 6`;
             }
         }
 
@@ -263,17 +283,22 @@
             const target = buttonsState.find(b => b.id === id);
             if (target) {
                 target.chosen = true;
+                // Lock in the topic it happened to hold at the moment of clicking
+                target.assignedTopic = target.currentTopic;
             }
-            renderFullBoard();
+            render();
         }
 
         function resetGame() {
-            buttonsState.forEach(b => b.chosen = false);
-            renderFullBoard();
+            buttonsState.forEach(b => {
+                b.chosen = false;
+                b.assignedTopic = null;
+            });
+            render();
         }
 
         // Initial load
-        renderFullBoard();
+        render();
     </script>
 </body>
 </html>
